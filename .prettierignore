@@ -1,0 +1,31 @@
+# build artifacts
+dist
+build
+coverage
+
+# dependencies
+node_modules
+
+# environment files
+.env
+.env.*
+
+# lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# generated files
+*.log
+*.cache
+*.local
+*.tmp
+
+# IDE / OS files
+.vscode
+.idea
+.DS_Store
+
+
+public/assets
+public/lib

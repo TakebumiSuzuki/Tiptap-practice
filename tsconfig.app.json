@@ -1,0 +1,32 @@
+{
+  // files キーを使うと、ワイルドカードが使えないので include キーを使っている。
+  // (ちなみに、Eslint の config では、files でワイルドカードが使えるので混乱しないように。)
+  // src ディレクトリの中にある .ts, .tsx, .vue ファイルだけをコンパイル（型チェック）の対象にする
+  // src/vite-env.d.ts ファイルも、これに適合するので読み込まれる。
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/**/*.js"],
+
+  // Vue 公式チームが推奨する、ブラウザ向けのTypeScript設定のベストプラクティスを読み込んでいる。
+  // node_modules/@vue/tsconfig/tsconfig.dom.json に実ファイルがある。
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "types": ["vite/client"],
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+
+    "allowJs": true, // JSファイルをプログラムの一部として受け入れる
+    "checkJs": true // JSファイルに対してもエラーチェックを行う
+  }
+}
