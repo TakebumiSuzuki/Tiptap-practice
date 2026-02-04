@@ -5,9 +5,10 @@
   import StarterKit from '@tiptap/starter-kit';
   import Highlight from '@tiptap/extension-highlight';
   import Placeholder from '@tiptap/extension-placeholder';
+  import { CharacterCount } from '@tiptap/extension-character-count';
   import { type JSONContent } from '@tiptap/core';
 
-  const props = defineProps<{ modelValue: JSONContent }>();
+  const props = defineProps<{ modelValue: JSONContent, maxLimit: number }>();
   const emit = defineEmits<{ (e: 'update:modelValue', value: JSONContent): void }>();
 
   const linkDialog = ref(false);
@@ -39,17 +40,25 @@
         placeholder: 'Select text to format it with various styles...',
         emptyEditorClass: 'is-editor-empty',
       }),
+      CharacterCount.configure({
+        limit: 1000,
+      }),
     ],
-    editorProps: {
-      attributes: {
-        class: '',
-      },
-    },
     onUpdate: ({ editor }) => {
       const contentObj = editor.getJSON();
       emit('update:modelValue', contentObj);
     },
   });
+
+  // 現在文字数を Reactive で管理
+  const currentCount = ref(0);
+
+  watch(
+    () => editor.value?.storage.characterCount.characters() ?? 0,
+    (count) => {
+      currentCount.value = count;
+    },
+  );
 
   // 親側でデータがプログラム的に変更された場合の監視
   watch(
@@ -73,9 +82,9 @@
   );
 
   // --- リンク関連のロジック ---
-
   const openLinkDialog = () => {
     if (editor.value) {
+      // 現在カーソルがある位置（または選択範囲の先頭）で、有効になっているリンクの情報を取得している
       const previousUrl = editor.value.getAttributes('link').href;
       // 既にリンクが貼ってあるテキストを選択していた場合ということ
       linkUrl.value = previousUrl || '';
@@ -98,13 +107,15 @@
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://' + url;
     }
-
+    // chain()は、これから複数の命令を連続してセットするぞという宣言
+    // focus()は、エディタにカーソル（フォーカス）を戻す命令
+    // extendMarkRange は、カーソルがリンク文字の途中にあった場合、自動的にそのリンク全体の文字列を選択状態まで広げるための命令
+    // .run() は、セットした命令をすべて実行せよという合図
     editor.value.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
     closeLinkDialog();
   };
 
   // --- Floating Menu のロジック ---
-
   /**
    * Floating Menu の表示条件:
    * カーソルがある行が「空の paragraph」であること
@@ -118,13 +129,8 @@
     return $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0;
   };
 
-  /**
-   * Heading ボタンのクリック処理
-   * 既に指定レベルの見出しなら paragraph に戻す（トグル）
-   */
   const handleHeadingToggle = (level: 2 | 3) => {
     if (!editor.value) return;
-
     if (editor.value.isActive('heading', { level })) {
       // 既に同じレベルの見出し → paragraph に戻す
       editor.value.chain().focus().setParagraph().run();
@@ -133,9 +139,6 @@
     }
   };
 
-  /**
-   * 画像挿入ボタン（現時点はプレースホルダー）
-   */
   const handleImageInsert = () => {
     // TODO: 後で実装する。現時点では何もしない。
     console.log('[画像挿入] 未実装');
@@ -151,40 +154,45 @@
   <v-card class="tiptap-editor-card" elevation="0">
     <v-card-text class="pa-0">
       <div v-if="editor" class="editor-wrapper">
-        <!-- ============================================================
-             Floating Menu（空行の時に表示される）
-             ============================================================ -->
+        <editor-content :editor="editor" class="editor-content" />
+        <p class="text-right mr-2 mt-1">{{ currentCount }} / {{ maxLimit }}</p>
+
+        <!--
+          カーソルが動くたびに、Tiptap側が floatingMenuShouldShow を実行して boolean を得る。
+          つまり、FloatingMenuに、floatingMenuShouldShow という判定関数を渡している。
+          そして、FloatingMenu は、editor, view, stateというキーバリューを持ったオブジェクトを引数として渡す。
+        -->
         <FloatingMenu
           :editor="editor"
           :should-show="floatingMenuShouldShow"
           :options="{ placement: 'bottom', offset: { mainAxis: 4, crossAxis: 20 } }"
         >
           <div class="floating-menu-modern">
-            <!-- 通常テキスト（Small） -->
+            <!-- Small Text -->
             <button
               class="floating-menu-btn floating-menu-btn-text"
               :class="{ 'is-active': editor.isActive('paragraph') && !editor.isActive('heading') }"
-              title="通常テキスト（Small）"
+              title="Small Text"
               @click="editor.chain().focus().setParagraph().run()"
             >
               sm
             </button>
 
-            <!-- 見出し（中）H3 (Medium) -->
+            <!-- Medium Text -->
             <button
               class="floating-menu-btn floating-menu-btn-text"
               :class="{ 'is-active': editor.isActive('heading', { level: 3 }) }"
-              title="見出し（中）H3"
+              title="Medium Text"
               @click="handleHeadingToggle(3)"
             >
               md
             </button>
 
-            <!-- 見出し（大）H2 (Large) -->
+            <!-- Large Text -->
             <button
               class="floating-menu-btn floating-menu-btn-text"
               :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }"
-              title="見出し（大）H2"
+              title="Large Text"
               @click="handleHeadingToggle(2)"
             >
               lg
@@ -192,11 +200,11 @@
 
             <div class="floating-menu-divider"></div>
 
-            <!-- ブロッククォート -->
+            <!-- Blockquote -->
             <button
               class="floating-menu-btn"
               :class="{ 'is-active': editor.isActive('blockquote') }"
-              title="引用"
+              title="Quote"
               @click="editor.chain().focus().toggleBlockquote().run()"
             >
               <v-icon size="18">mdi-format-quote-close</v-icon>
@@ -204,21 +212,21 @@
 
             <div class="floating-menu-divider"></div>
 
-            <!-- ブレットリスト -->
+            <!-- BulletList -->
             <button
               class="floating-menu-btn"
               :class="{ 'is-active': editor.isActive('bulletList') }"
-              title="ブレットリスト"
+              title="Bullet List"
               @click="editor.chain().focus().toggleBulletList().run()"
             >
               <v-icon size="18">mdi-view-list</v-icon>
             </button>
 
-            <!-- 番号リスト -->
+            <!-- OrderedList -->
             <button
               class="floating-menu-btn"
               :class="{ 'is-active': editor.isActive('orderedList') }"
-              title="番号リスト"
+              title="Ordered List"
               @click="editor.chain().focus().toggleOrderedList().run()"
             >
               <v-icon size="18">mdi-format-list-numbered</v-icon>
@@ -226,43 +234,40 @@
 
             <div class="floating-menu-divider"></div>
 
-            <!-- 画像挿入（未実装） -->
-            <button class="floating-menu-btn" title="画像挿入（未実装）" @click="handleImageInsert">
+            <!-- Insert Image -->
+            <button class="floating-menu-btn" title="Insert Image" @click="handleImageInsert">
               <v-icon size="18">mdi-image-plus</v-icon>
             </button>
           </div>
         </FloatingMenu>
 
-        <!-- ============================================================
-             Bubble Menu（テキスト選択時に表示される）
-             ============================================================ -->
         <BubbleMenu :editor="editor" :options="{ placement: 'top', offset: 8 }">
           <div class="bubble-menu-modern">
-            <!-- 太字 -->
+            <!-- Bold -->
             <button
               class="menu-btn"
               :class="{ 'is-active': editor.isActive('bold') }"
-              title="太字"
+              title="Bold"
               @click="editor.chain().focus().toggleBold().run()"
             >
               <v-icon size="18">mdi-format-bold</v-icon>
             </button>
 
-            <!-- 打ち消し線 -->
+            <!-- Strike -->
             <button
               class="menu-btn"
               :class="{ 'is-active': editor.isActive('strike') }"
-              title="打ち消し線"
+              title="Strike"
               @click="editor.chain().focus().toggleStrike().run()"
             >
               <v-icon size="18">mdi-format-strikethrough</v-icon>
             </button>
 
-            <!-- ハイライト -->
+            <!-- Highlight -->
             <button
               class="menu-btn"
               :class="{ 'is-active': editor.isActive('highlight') }"
-              title="マーカー"
+              title="Highlight"
               @click="editor.chain().focus().toggleHighlight().run()"
             >
               <v-icon size="18">mdi-marker</v-icon>
@@ -270,20 +275,17 @@
 
             <div class="menu-divider"></div>
 
-            <!-- リンク -->
+            <!-- Link -->
             <button
               class="menu-btn"
               :class="{ 'is-active': editor.isActive('link') }"
-              title="リンク"
+              title="Link"
               @click="openLinkDialog"
             >
               <v-icon size="18">mdi-link-variant</v-icon>
             </button>
           </div>
         </BubbleMenu>
-
-        <!-- エディタ本体 -->
-        <editor-content :editor="editor" class="editor-content" />
       </div>
     </v-card-text>
 
@@ -291,7 +293,7 @@
     <v-dialog v-model="linkDialog" max-width="500px">
       <v-card>
         <v-card-title>
-          <span class="text-h6">リンクを挿入</span>
+          <span class="text-h6">Add Link</span>
         </v-card-title>
         <v-card-text>
           <v-text-field
@@ -305,8 +307,8 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn color="grey" variant="text" @click="closeLinkDialog"> キャンセル </v-btn>
-          <v-btn color="primary" variant="flat" @click="setLink" :disabled="!linkUrl"> 挿入 </v-btn>
+          <v-btn color="grey" variant="text" @click="closeLinkDialog"> Cancel </v-btn>
+          <v-btn color="primary" variant="flat" @click="setLink" :disabled="!linkUrl"> Add </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

@@ -41,7 +41,7 @@
             <v-card class="pa-4">
               <!-- エディタコンポーネントの配置 -->
               <!-- v-model で contentData と同期します -->
-              <TiptapEditor v-model="contentData" />
+              <TiptapEditor v-model="contentData" :max-limit="1000" />
 
               <!-- 外側に配置したアクションボタン -->
               <v-card-actions class="mt-4 px-0">
