@@ -3,37 +3,32 @@
   import { useEditor, EditorContent } from '@tiptap/vue-3';
   import { BubbleMenu, FloatingMenu } from '@tiptap/vue-3/menus';
   import StarterKit from '@tiptap/starter-kit';
-  import Link from '@tiptap/extension-link';
   import Highlight from '@tiptap/extension-highlight';
   import Placeholder from '@tiptap/extension-placeholder';
+  import { type JSONContent } from '@tiptap/core';
 
-  // 親コンポーネントとのデータのやり取りを定義
-  const props = defineProps<{ modelValue?: Record<string, any> | null }>();
+  const props = defineProps<{ modelValue: JSONContent }>();
+  const emit = defineEmits<{ (e: 'update:modelValue', value: JSONContent): void }>();
 
-  // 親コンポーネントへ更新を通知するイベント定義
-  const emit = defineEmits<{ (e: 'update:modelValue', value: Record<string, any>): void }>();
-
-  // リンク挿入ダイアログ用の状態管理
   const linkDialog = ref(false);
   const linkUrl = ref('');
 
-  // Tiptapエディタの初期化
   const editor = useEditor({
     // Vue のプロキシを除去して生オブジェクトにし、null/undefined なら空文字にフォールバック
-    content: props.modelValue ? JSON.parse(JSON.stringify(props.modelValue)) : '',
+    // content: props.modelValue ? JSON.parse(JSON.stringify(props.modelValue)) : '',
+    content: props.modelValue,
 
     extensions: [
-      // StarterKit には heading, bulletList, orderedList, blockquote が含まれている
-      // link: false で StarterKit 側の Link を無効にし、下記の Link.configure と重複を防ぐ
-      StarterKit.configure({ link: false }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        linkOnPaste: true,
-        HTMLAttributes: {
-          class: 'custom-link',
+      // StarterKit には heading, bulletList, orderedList, blockquote, link などが含まれている
+      StarterKit.configure({
+        link: {
+          openOnClick: true,
+          autolink: true,
+          linkOnPaste: true,
+          HTMLAttributes: { class: 'custom-link' },
         },
       }),
+
       Highlight.configure({
         multicolor: false,
         HTMLAttributes: {
@@ -47,12 +42,12 @@
     ],
     editorProps: {
       attributes: {
-        class: 'prose prose-sm focus:outline-none',
+        class: '',
       },
     },
     onUpdate: ({ editor }) => {
-      const json = editor.getJSON();
-      emit('update:modelValue', json);
+      const contentObj = editor.getJSON();
+      emit('update:modelValue', contentObj);
     },
   });
 
@@ -62,6 +57,7 @@
     (newValue) => {
       if (!editor.value) return;
 
+      // この比較ロジックは、Vueの v-model の仕組みにおける 無限ループを防ぐ ために必須
       const currentContent = JSON.stringify(editor.value.getJSON());
       const newContent = JSON.stringify(newValue);
 
@@ -81,6 +77,7 @@
   const openLinkDialog = () => {
     if (editor.value) {
       const previousUrl = editor.value.getAttributes('link').href;
+      // 既にリンクが貼ってあるテキストを選択していた場合ということ
       linkUrl.value = previousUrl || '';
     }
     linkDialog.value = true;

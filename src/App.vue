@@ -1,13 +1,16 @@
 <script setup lang="ts">
   import { ref } from 'vue';
+  import { type JSONContent } from '@tiptap/core';
   import TiptapEditor from './components/TiptapEditor.vue';
 
-  const contentData = ref<Record<string, any>>({})
+  const contentData = ref<JSONContent>({
+    type: 'doc',
+    content: [],
+  });
 
-  // 送信ボタンの処理
   const submit = () => {
-    // contentData.value には常に最新のJSONが入っています
     console.log('--- 送信データ (JSON) ---');
+    // 第二引数は、replacer、第三引数の２は、インデント用のスペース数
     console.log(JSON.stringify(contentData.value, null, 2));
 
     alert('コンソールにJSONを出力しました。データ送信処理をここに記述します。');
@@ -15,7 +18,6 @@
 
   // クリアボタンの処理
   const clearContent = () => {
-    // 親側でデータを書き換えると、エディタ側も watch で反応してクリアされます
     contentData.value = {
       type: 'doc',
       content: [
