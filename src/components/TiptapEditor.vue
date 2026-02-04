@@ -5,6 +5,7 @@
   import StarterKit from '@tiptap/starter-kit';
   import Link from '@tiptap/extension-link';
   import Highlight from '@tiptap/extension-highlight';
+  import Placeholder from '@tiptap/extension-placeholder';
 
   // 親コンポーネントとのデータのやり取りを定義
   const props = defineProps<{ modelValue?: Record<string, any> | null }>();
@@ -22,7 +23,7 @@
     content: props.modelValue ? JSON.parse(JSON.stringify(props.modelValue)) : '',
 
     extensions: [
-      // StarterKit には heading, bulletList, orderedList が含まれている
+      // StarterKit には heading, bulletList, orderedList, blockquote が含まれている
       // link: false で StarterKit 側の Link を無効にし、下記の Link.configure と重複を防ぐ
       StarterKit.configure({ link: false }),
       Link.configure({
@@ -38,6 +39,10 @@
         HTMLAttributes: {
           class: 'custom-highlight',
         },
+      }),
+      Placeholder.configure({
+        placeholder: 'Select text to format it with various styles...',
+        emptyEditorClass: 'is-editor-empty',
       }),
     ],
     editorProps: {
@@ -158,37 +163,50 @@
           :options="{ placement: 'bottom', offset: { mainAxis: 4, crossAxis: 20 } }"
         >
           <div class="floating-menu-modern">
-            <!-- 見出し→通常テキスト（リセット） -->
+            <!-- 通常テキスト（Small） -->
             <button
-              class="floating-menu-btn"
+              class="floating-menu-btn floating-menu-btn-text"
               :class="{ 'is-active': editor.isActive('paragraph') && !editor.isActive('heading') }"
-              title="通常テキスト"
+              title="通常テキスト（Small）"
               @click="editor.chain().focus().setParagraph().run()"
             >
-              <v-icon size="18">mdi-format-paragraph</v-icon>
+              sm
             </button>
 
-            <!-- 見出し（中）H3 -->
+            <!-- 見出し（中）H3 (Medium) -->
             <button
-              class="floating-menu-btn"
+              class="floating-menu-btn floating-menu-btn-text"
               :class="{ 'is-active': editor.isActive('heading', { level: 3 }) }"
               title="見出し（中）H3"
               @click="handleHeadingToggle(3)"
             >
-              <v-icon size="18">mdi-format-header-3</v-icon>
+              md
             </button>
 
-            <!-- 見出し（大）H2 -->
+            <!-- 見出し（大）H2 (Large) -->
             <button
-              class="floating-menu-btn"
+              class="floating-menu-btn floating-menu-btn-text"
               :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }"
               title="見出し（大）H2"
               @click="handleHeadingToggle(2)"
             >
-              <v-icon size="18">mdi-format-header-2</v-icon>
+              lg
             </button>
 
             <div class="floating-menu-divider"></div>
+
+            <!-- ブロッククォート -->
+            <button
+              class="floating-menu-btn"
+              :class="{ 'is-active': editor.isActive('blockquote') }"
+              title="引用"
+              @click="editor.chain().focus().toggleBlockquote().run()"
+            >
+              <v-icon size="18">mdi-format-quote-close</v-icon>
+            </button>
+
+            <div class="floating-menu-divider"></div>
+
             <!-- ブレットリスト -->
             <button
               class="floating-menu-btn"
@@ -220,7 +238,6 @@
 
         <!-- ============================================================
              Bubble Menu（テキスト選択時に表示される）
-             ※ ヘッディング（H2/H3）ボタンはここから削除済み
              ============================================================ -->
         <BubbleMenu :editor="editor" :options="{ placement: 'top', offset: 8 }">
           <div class="bubble-menu-modern">
@@ -378,14 +395,22 @@
     border-radius: 10px;
     padding: 3px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-    /* 通常状態は半透明で存在感を落とす */
-    opacity: 0.5;
-    transition: opacity 0.2s ease;
+    /* トランジション効果を追加 */
+    opacity: 0;
+    transform: translateY(-8px);
+    animation: floatingMenuFadeIn 0.3s ease forwards;
+  }
+
+  @keyframes floatingMenuFadeIn {
+    to {
+      opacity: 0.6;
+      transform: translateY(0);
+    }
   }
 
   /* マウス進入時に不透明に戻す */
   .floating-menu-modern:hover {
-    opacity: 1;
+    opacity: 1 !important;
   }
 
   .floating-menu-btn {
@@ -400,6 +425,14 @@
     cursor: pointer;
     transition: all 0.2s ease;
     color: #424242;
+  }
+
+  /* テキストボタン用のスタイル */
+  .floating-menu-btn-text {
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Roboto Mono', monospace;
+    letter-spacing: -0.5px;
   }
 
   .floating-menu-btn:hover {
@@ -425,6 +458,23 @@
   :deep(.ProseMirror) {
     min-height: 300px;
     outline: none;
+  }
+
+  /* プレースホルダースタイル */
+  :deep(.ProseMirror p.is-editor-empty:first-child::before) {
+    content: attr(data-placeholder);
+    float: left;
+    color: #adb5bd;
+    pointer-events: none;
+    height: 0;
+  }
+
+  :deep(.ProseMirror.is-editor-empty p.is-empty:first-child::before) {
+    content: attr(data-placeholder);
+    float: left;
+    color: #adb5bd;
+    pointer-events: none;
+    height: 0;
   }
 
   :deep(.ProseMirror p) {
@@ -464,6 +514,26 @@
   :deep(.ProseMirror ol ul) {
     margin: 0.25em 0;
     padding-left: 24px;
+  }
+
+  /* ブロッククォートスタイル */
+  :deep(.ProseMirror blockquote) {
+    border-left: 4px solid #1976d2;
+    padding-left: 1em;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0.8em;
+    margin-bottom: 0.8em;
+    color: #616161;
+    font-style: italic;
+    background: #f5f5f5;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    border-radius: 0 4px 4px 0;
+  }
+
+  :deep(.ProseMirror blockquote p) {
+    margin: 0.3em 0;
   }
 
   :deep(.ProseMirror a.custom-link) {
