@@ -1,0 +1,75 @@
+// このプロジェクトを開いている時だけ有効になる、**VSCodeエディタの専用設定**です。あなたのPC全体のVSCode設定を汚すことなく、
+// このプロジェクトに最適な設定を適用してくれます。
+{
+	"typescript.tsdk": "./node_modules/typescript/lib",
+
+  "editor.tabSize": 2,
+	"[python]": {
+			"editor.tabSize": 4 // Pythonだけ4
+	},
+	// Tabキーを押したときに、タブ文字ではなくスペースを入力するという設定(デフォルトで true だが明示しておく)
+	"editor.insertSpaces": true,
+
+	"files.autoSave": "afterDelay",
+	"files.autoSaveDelay": 1000,
+
+	// プロジェクトのルート直下に package.json がなく、サブフォルダ（例: frontend/ や backend/）の中にある場合、
+	// ESLintに「ここが作業場所だよ」と教える設定
+	"eslint.workingDirectories": [{"mode": "auto"}],
+
+	//  文字を入力するそばから、リアルタイムで構文解析が走るようにする。他に、"onSave"という選択肢もある。
+	"eslint.run": "onType",
+
+	// source.fixAllは、そのツールが提供する、修正可能なすべての問題を自動で直すというVS Codeのアクションの種類を指します。
+	// "explicit" はユーザーが手動保存した時だけを実行したときだけ動く。つまり、自動保存では 絶対に fix をしない
+	// VS Codeの仕様では、通常以下の順番で処理されます。
+	// 1. FormatOnSave (Prettier) がまず走って、見た目をきれいに。
+	// 2. CodeActionsOnSave (ESLint) が次に走って、ロジックを修正。
+	"editor.codeActionsOnSave": {
+			"source.fixAll.eslint": "explicit" // python用には追加で ruff などの設定を追加可能。
+	},
+	"eslint.codeActionsOnSave.rules": [
+    "!@typescript-eslint/no-unused-vars",
+    "!no-unused-vars"
+	],
+
+
+  // これは手動保存時にフォーマッターがトリガーされる設定。自動保存ではトリガーされない。
+  "editor.formatOnSave": true,
+  // ペースト時に自動フォーマット
+  "editor.formatOnPaste": true,
+  // 入力時に自動フォーマット（括弧補完など）
+  "editor.formatOnType": false,
+  //  Prettierの設定ファイルが存在する場合のみフォーマットを実行
+  "prettier.requireConfig": true,
+
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  // VSCode 内蔵フォーマッターや Vue公式プラグイン内蔵のフォーマッターとの競合を避けるため、以下のように明記
+  "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[vue]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[scss]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+}

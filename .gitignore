@@ -30,7 +30,6 @@ dist-ssr/
 # =========================
 # エディタ・IDE
 # =========================
-.vscode/
 !.vscode/extensions.json
 .idea/
 *.swp
